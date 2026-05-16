@@ -576,13 +576,9 @@
       const doHeartbeat = false;
       const doInitSSE = false;
 
-
-      const scriptFiles = ['/web?common.js', '../../CommonMaster/common.js'];
-      for (let i = 0; i < scriptFiles.length; i++) {
-        const scriptElement = document.createElement('script');
-        scriptElement.src = scriptFiles[i];
-        document.body.appendChild(scriptElement);
-      }
+      const scriptElement = document.createElement('script');
+      scriptElement.src = (window.location.protocol === "file:") ? '../../CommonMaster/common.js' : '/web?common.js';
+      document.body.appendChild(scriptElement);
 
       window.addEventListener('load', function() {
         initialise();
