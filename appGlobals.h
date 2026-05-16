@@ -31,7 +31,7 @@
 #define MIN_PSRAM 4
 
 #define APP_NAME "ESP32_AdBlocker" // max 15 chars
-#define APP_VER "3.1"
+#define APP_VER "3.2"
 
 #define HTTP_CLIENTS 2 // http, ws
 #define MAX_STREAMS 0

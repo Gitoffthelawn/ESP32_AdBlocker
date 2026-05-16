@@ -409,10 +409,10 @@ void appSpecificWsHandler(const char* wsMsg) {
   }
 }
 
-void buildAppJsonString(bool filter) {
+char* buildAppJsonString(bool filter) {
   // build app specific part of json string
   char* p = jsonBuff + 1;
-  *p = 0;
+  return p;
 }
 
 esp_err_t appSpecificWebHandler(httpd_req_t *req, const char* variable, const char* value) {
@@ -432,7 +432,7 @@ bool appDataFiles() {
   return true;
 }
 
-void doAppPing() {
+void doAppPing(bool timeSynced) {
   // if daily alarm occurs, load latest blocklist from host site
   if (checkAlarm() && strlen(fileURL)) loadBlockList("Scheduled");
 }

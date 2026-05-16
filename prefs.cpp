@@ -406,8 +406,7 @@ void buildJsonString(uint8_t filter) {
   *p++ = '{';
   if (filter < 2) {
     // build json string for main page refresh
-    buildAppJsonString((bool)filter);
-    p += strlen(jsonBuff) - 1;
+    p = buildAppJsonString((bool)filter);
     p += sprintf(p, "\"cfgGroup\":\"-1\",");
     // generic footer
     currEpoch = getEpoch(); 

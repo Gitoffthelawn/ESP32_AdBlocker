@@ -17,13 +17,15 @@ size_t alertBufferSize = 0;
 size_t maxAlertBuffSize = 32 * 1024;
 byte* alertBuffer = NULL; // buffer for telegram / smtp alert image
 static void printPartitionTable();
-int wakePin; // if wakeUse is true
+int wakePin = -1; // if wakeUse is true
 int wakeLevel; // if wakeUse is true
 bool wakeUse = false; // true to allow app to sleep and wake
 char* jsonBuff = NULL;
 char portFwd[6] = "";
 UBaseType_t STACK_MEM; // allow some task stacks to use psram if available
 float latLon[2];
+RTC_DATA_ATTR uint32_t remainingSeconds = 0;
+uint32_t deepSleepTimer = 0;
 
 /************************** Network (WiFi/Ethernet) **************************/
 
@@ -380,7 +382,6 @@ bool startNetwork(bool firstcall) {
   }
   // connect wifi STA, or AP if router details not available
   if (!res) startWifi(firstcall);
-  getExtIP();
   res = startWebServer(); 
 #ifdef DEV_ONLY
   devCheck();
@@ -426,8 +427,8 @@ void resetWatchDog(int wdIndex, uint32_t wdTimeout) {
 
 static void statusCheck() {
   // regular status checks
-  doAppPing();
   if (!timeSynchronized) getLocalNTP();
+  doAppPing(timeSynchronized);
   if (!dataFilesChecked) dataFilesChecked = checkDataFiles();
 #if INCLUDE_MQTT
   if (mqtt_active) startMqttClient();
@@ -552,12 +553,13 @@ void getExtIP() {
         } else LOG_WRN("External IP request failed, error: %s", http.errorToString(httpCode).c_str());    
         
         if (httpCode != HTTP_CODE_OK) doGetExtIP = false;
-        http.end();     
+        http.end();
       }
       remoteServerClose(hclient);
     }
   }
 }
+
 
 /************** generic NetworkClientSecure functions ******************/
 
@@ -1007,6 +1009,18 @@ void doRestart(const char* restartStr) {
   ESP.restart();
 }
 
+static void sleepTimer(bool startCycle) {
+  // go into deep sleep for defined time
+  // maximum sleep time is c. 2 hours, so multiple sleep cycles needed for long durations
+  if (startCycle) remainingSeconds = deepSleepTimer;
+  if (remainingSeconds > 0) {
+    uint32_t sleepNow = min(remainingSeconds, (uint32_t)3600); // use 1 hour (3600 secs)  as sleep cycle duration
+    remainingSeconds -= sleepNow;
+    esp_sleep_enable_timer_wakeup((uint64_t)sleepNow * 1000000ULL); // in micro secs
+    esp_deep_sleep_start();
+  }
+}
+
 void goToSleep(bool deepSleep) {
 #if !CONFIG_IDF_TARGET_ESP32C3
   // if deep sleep, restarts with reset
@@ -1017,10 +1031,16 @@ void goToSleep(bool deepSleep) {
     if (wakePin >= 0) {
       // wakeup on pin low (0) or high (1)
       // needs to be RTC pin and support input pullup/down
+      // Boot button can be used as manual wake pin
+      // To use LDR or TDR on wake pin, connect it between pin and 3V3
+      // uses internal pulldown resistor as voltage divider
+      // but may need to add external pull down between pin
+      // and GND to alter required level for wakeup
       pinMode(wakePin, wakeLevel == 0 ? INPUT_PULLUP : INPUT_PULLDOWN);
       esp_sleep_enable_ext0_wakeup((gpio_num_t)wakePin, wakeLevel);
-    }
-    esp_deep_sleep_start();
+      esp_deep_sleep_start();
+    } else if (deepSleepTimer) sleepTimer(true); // use timer
+    // no action if no wake pin or timer
   } else {
     // light sleep
     esp_wifi_stop();
@@ -1038,6 +1058,7 @@ void goToSleep(bool deepSleep) {
 
 bool utilsStartup() {
   bool res = false;
+  sleepTimer(false);
 #if CONFIG_IDF_TARGET_ESP32S3
   STACK_MEM = psramFound() ? MALLOC_CAP_SPIRAM : MALLOC_CAP_INTERNAL;
 #else
