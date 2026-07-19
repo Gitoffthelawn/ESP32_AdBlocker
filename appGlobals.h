@@ -19,7 +19,6 @@
 /*********************** Fixed defines leave as is ***********************/ 
 /** Do not change anything below here unless you know what you are doing **/
 
-#define STATIC_IP_OCTAL "168" // dev only
 #define DEBUG_MEM false // leave as false
 #define FLUSH_DELAY 0 // for debugging crashes
 #define DBG_ON false // esp debug output
@@ -31,7 +30,7 @@
 #define MIN_PSRAM 4
 
 #define APP_NAME "ESP32_AdBlocker" // max 15 chars
-#define APP_VER "3.2"
+#define APP_VER "3.3"
 
 #define HTTP_CLIENTS 2 // http, ws
 #define MAX_STREAMS 0
@@ -61,7 +60,7 @@
 #define INCLUDE_WEBDAV true   // webDav.cpp (WebDAV protocol)
 
 // to determine if newer data files need to be loaded
-#define CFG_VER 4
+#define CFG_VER 5
 
 #ifdef CONFIG_IDF_TARGET_ESP32S3 
 #define SERVER_STACK_SIZE (1024 * 8)

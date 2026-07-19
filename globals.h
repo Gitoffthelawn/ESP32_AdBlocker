@@ -2,15 +2,15 @@
 //
 // s60sc 2021, 2022
 
+#pragma once
+
 #include "esp_arduino_version.h"
 
 #if ESP_ARDUINO_VERSION < ESP_ARDUINO_VERSION_VAL(3, 1, 1)
 #error Must be compiled with arduino-esp32 core v3.1.1 or higher
 #endif
 
-#pragma once
-
-#if __has_include("./devUtilities.cpp")
+#if (__has_include("../devUtilities.cpp") || __has_include("./devUtilities.cpp"))
 #define DEV_ONLY
 #endif
 #ifdef DEV_ONLY
@@ -39,6 +39,7 @@
 #include <SD_MMC.h>
 #endif
 #include <LittleFS.h>
+#include <FFat.h>
 #include <sstream>
 #include <Update.h>
 #include <WiFi.h>
@@ -465,3 +466,4 @@ void logIncrementDropCount();
 } while(0)
 
 #define LOG_PRT(buff, bufflen) log_print_buf((const uint8_t*)buff, bufflen)
+

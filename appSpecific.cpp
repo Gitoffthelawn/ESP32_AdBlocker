@@ -22,6 +22,7 @@ static uint8_t domainLine[maxLineLen];
 static uint32_t blockCnt = 0, allowCnt = 0, itemsLoaded = 0, duplicates = 0;
 static bool stopLoad = false;
 static bool downloading = false;
+static bool adBlockOn = true; // whether app is set to block or not by user
 
 size_t storageSize;
 uint32_t* ptrs; // ordered pointers to domain names
@@ -88,15 +89,18 @@ static bool updateCustomFile(char* domainName, bool doDelete) {
 }
 
 IPAddress checkBlocklist(const char* domainName) {
-  // called from ESP32_DNSServer
-  static char blockedDomain[FILE_NAME_LEN] = {0};
-  uint64_t usElapsed = micros();
-  // check if received domain name same as previous blocked domain to skip search
-  bool blocked = !strcmp(domainName, blockedDomain) ? true : (bool)binarySearch(domainName, false);
-  if (blocked) strcpy(blockedDomain, domainName);
-  blocked ? ++blockCnt : ++allowCnt;
-  uint64_t checkTime = micros() - usElapsed;
-  LOG_VRB("Check %s %s in %lluus", domainName, (blocked) ? "*Blocked*" : "Allowed", checkTime);
+  // called from externalDNS.cpp
+  bool blocked = false;
+  if (adBlockOn) {
+    static char blockedDomain[FILE_NAME_LEN] = {0};
+    uint64_t usElapsed = micros();
+    // check if received domain name same as previous blocked domain to skip search
+    blocked = !strcmp(domainName, blockedDomain) ? true : (bool)binarySearch(domainName, false);
+    if (blocked) strcpy(blockedDomain, domainName);
+    blocked ? ++blockCnt : ++allowCnt;
+    uint64_t checkTime = micros() - usElapsed;
+    LOG_VRB("Check %s %s in %lluus", domainName, (blocked) ? "*Blocked*" : "Allowed", checkTime);
+  }
   return blocked ? IPAddress(0, 0, 0, 0) : resolveDomain(domainName);
 }
 
@@ -298,10 +302,11 @@ static bool loadBlockList(const char* reason) {
     duplicates = 0;
     updateConfigVect("loadProg", "0.0%");
     LOG_INF("%s load of latest blocklist", reason);
-    while (!downloadBlockList()) {
-      LOG_WRN("Try entering different blocklist URL as %s failed, then press Reload button", fileURL);
-      delay(30000);
-    }
+    if (!downloadBlockList()) {
+      snprintf(startupFailure, SF_LEN, STARTUP_FAIL "Blocklist URL %s failed to load", fileURL);
+      LOG_WRN("%s", startupFailure);
+      LOG_INF("*** Enter on browser: http://<AdBlocker IP>/control?zLoad=<valid blocklist URL>");
+     }
     loadCustom();
     downloading = false;
   } else LOG_WRN("Ignore request as download in progress");
@@ -372,6 +377,11 @@ bool updateAppStatus(const char* variable, const char* value, bool fromUser) {
   else if (fromUser && !strcmp(variable, "zzCustom")) {
     STORAGE.remove(CUSTOM_FILE_PATH);
     LOG_ALT("Deleted custom blocklist file");
+  }
+  else if (!strcmp(variable, "zzzAdblockOn")) {
+    adBlockOn = (bool)intVal;
+    if (adBlockOn) LOG_ALT("Ad blocking enabled");
+    else LOG_WRN("Ad blocking disabled");
   }
   return res;
 }
@@ -457,7 +467,7 @@ AP_sn~~0~T~AP subnet
 AP_gw~~0~T~AP gateway
 useHttps~0~0~C~Enable HTTPS connection to app
 allowAP~0~0~C~Allow simultaneous AP
-timezone~JST-9~1~T~Timezone string: tinyurl.com/TZstring
+timezone~GMT0~1~T~Timezone string: tinyurl.com/TZstring
 logType~0~99~N~Output log selection
 Auth_Name~~0~T~Optional user name for web page login
 Auth_Pass~~0~T~Optional web page password
@@ -480,6 +490,7 @@ vLoad~Del Domain~2~A~Delete from blocklist
 zLoad~Reload~2~A~Reload Blocklist
 xStop~Stop Load~2~A~Stop Blocklist Load
 zzCustom~Clear~2~A~Clear custom blocklist
+zzzAdblockOn~1~2~C~Enable AdBlocker 
 ethCS~-1~3~N~Ethernet CS pin
 ethInt~-1~3~N~Ethernet Interrupt pin
 ethRst~-1~3~N~Ethernet Reset pin

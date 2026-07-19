@@ -36,6 +36,7 @@ int parseDNSname(uint8_t *packet, int offset, char *out) {
   return offset + 1;
 }
 
+
 void handleDNSpacket(AsyncUDPPacket packet) {
   uint8_t *rx = (uint8_t *)packet.data();
   int len = packet.length();
@@ -45,14 +46,17 @@ void handleDNSpacket(AsyncUDPPacket packet) {
   char domain[MAX_HOSTNAME];
   int new_offset = parseDNSname(rx, offset, domain);
   if (new_offset < 0) return;
+
   uint16_t qtype = (rx[new_offset] << 8) | rx[new_offset + 1];
   offset = new_offset;
   offset += 4; // skip QTYPE + QCLASS
 
   // Build response
   uint8_t tx[512];
-  memcpy(tx, rx, len);
+  memcpy(tx, rx, offset); // only copy header + question, to avoid possible overflow on EDNS0-extended) packet
   dns_header_t *res = (dns_header_t *)tx;
+
+  res->qdcount = htons(1);
   res->nscount = 0;
   res->arcount = 0; // any OPT/additional records in the query are not echoed back
   int resp_offset = offset;
@@ -107,9 +111,8 @@ void handleDNSpacket(AsyncUDPPacket packet) {
 
 void prepDNS() {
   if (udp.listen(DNS_DEFAULT_PORT)) {
-    LOG_INF("AdBlocker server started on port %d", DNS_DEFAULT_PORT);
     udp.onPacket([](AsyncUDPPacket packet) { handleDNSpacket(packet); });
-    LOG_INF("DNS Server started on %s:%d", formatIPstr(), DNS_DEFAULT_PORT);
+    LOG_INF("AdBlocker DNS Server started on %s:%d", formatIPstr(), DNS_DEFAULT_PORT);
   } else {
     snprintf(startupFailure, SF_LEN, STARTUP_FAIL "DNS server not started");
     LOG_WRN("%s", startupFailure);

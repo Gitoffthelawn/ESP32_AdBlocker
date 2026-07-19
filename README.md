@@ -28,6 +28,7 @@ The entries on the ESP32_AdBlocker web page are:
   * After entering domain URL to check if in blocklist, press **CheckDomain** button. Alert message will show result.
 * **Stop Blocklist Load**: Press **StopLoad** button to stop the currently downloading blocklist.
 * **Clear custom blocklist**: Clear the custom entries manually added or removed by user
+* **Enable AdBlocker**: Toggle Ad blocking on or off
 
 
 To make ESP32_AdBlocker your preferred DNS server, enter its IPv4 address in place of the current DNS server IPs in your router / devices. ESP32_AdBlocker does not have an IPv6 address but some devices use IPv6 by default, so disable IPv6 DNS on your device / router to force it to use IPv4 DNS.  
