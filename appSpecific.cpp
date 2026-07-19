@@ -457,7 +457,7 @@ AP_sn~~0~T~AP subnet
 AP_gw~~0~T~AP gateway
 useHttps~0~0~C~Enable HTTPS connection to app
 allowAP~0~0~C~Allow simultaneous AP
-timezone~GMT0~1~T~Timezone string: tinyurl.com/TZstring
+timezone~JST-9~1~T~Timezone string: tinyurl.com/TZstring
 logType~0~99~N~Output log selection
 Auth_Name~~0~T~Optional user name for web page login
 Auth_Pass~~0~T~Optional web page password
