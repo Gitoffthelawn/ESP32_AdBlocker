@@ -302,13 +302,15 @@ static bool loadBlockList(const char* reason) {
     duplicates = 0;
     updateConfigVect("loadProg", "0.0%");
     LOG_INF("%s load of latest blocklist", reason);
-    if (!downloadBlockList()) {
-      snprintf(startupFailure, SF_LEN, STARTUP_FAIL "Blocklist URL %s failed to load", fileURL);
-      LOG_WRN("%s", startupFailure);
-      LOG_INF("*** Enter on browser: http://<AdBlocker IP>/control?zLoad=<valid blocklist URL>");
-     }
-    loadCustom();
-    downloading = false;
+    if (netIsConnected()) {
+      if (!downloadBlockList()) {
+        snprintf(startupFailure, SF_LEN, STARTUP_FAIL "Blocklist URL %s failed to load", fileURL);
+        LOG_WRN("%s", startupFailure);
+        LOG_INF("*** Enter on browser: http://<AdBlocker IP>/control?zLoad=<valid blocklist URL>");
+        downloading = false;
+      }
+      loadCustom();
+    } else LOG_WRN("Internet download not available");
   } else LOG_WRN("Ignore request as download in progress");
   return downloading;
 }
@@ -331,8 +333,7 @@ void appSetup() {
 
   updateConfigVect("blockCnt", "0");
   updateConfigVect("allowCnt", "0");
-  loadBlockList("Initial");
-  prepDNS();
+  if (loadBlockList("Initial")) prepDNS();
 }
 
 /************************ webServer callbacks *************************/
